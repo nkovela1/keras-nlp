@@ -216,11 +216,11 @@ class T5Seq2SeqLM(GenerativeTask):
 
     @classproperty
     def backbone_cls(cls):
-        return BartBackbone
+        return T5Backbone
 
     @classproperty
     def preprocessor_cls(cls):
-        return BartSeq2SeqLMPreprocessor
+        return T5Seq2SeqLMPreprocessor
 
     def call_decoder_with_cache(
         self,
