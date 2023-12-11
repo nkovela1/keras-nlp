@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from keras_nlp.api_export import keras_nlp_export
+from keras_nlp.backend import config
 from keras_nlp.backend import keras
 from keras_nlp.backend import ops
 
@@ -106,6 +107,12 @@ class PositionEmbedding(keras.layers.Layer):
         shape = ops.shape(inputs)
         feature_length = shape[-1]
         sequence_length = shape[-2]
+        if config.backend() == "jax":
+            from jax.experimental.export import shape_poly
+            from jax import core
+            if isinstance(sequence_length, shape_poly._DimExpr):
+                sequence_length = core.min_dim(sequence_length, self.position_embeddings.shape[0])
+                shape = (shape[0], sequence_length, feature_length)
         # trim to match the length of the input sequence, which might be less
         # than the sequence_length of the layer.
         position_embeddings = ops.convert_to_tensor(self.position_embeddings)
