@@ -14,6 +14,8 @@
 
 from keras_nlp.api_export import keras_nlp_export
 from keras_nlp.backend import keras
+from keras_nlp.backend import config
+from keras_nlp.backend import ops
 from keras_nlp.layers.modeling.position_embedding import PositionEmbedding
 from keras_nlp.layers.modeling.reversible_embedding import ReversibleEmbedding
 from keras_nlp.utils.keras_utils import clone_initializer
@@ -132,6 +134,19 @@ class TokenAndPositionEmbedding(keras.layers.Layer):
             embedded_tokens,
             start_index=start_index,
         )
+
+        if config.backend() == "jax":
+            from jax.experimental.export import shape_poly
+            from jax import core
+
+            embed_shape = ops.shape(embedded_tokens)
+            seq_length = embed_shape[-2]
+            feature_length = embed_shape[-1]
+            if isinstance(seq_length, shape_poly._DimExpr):
+                seq_length = core.min_dim(seq_length, self.sequence_length)
+                embed_shape = (embed_shape[0], seq_length, feature_length)
+            embedded_tokens = embedded_tokens[:, :seq_length, :]
+
         outputs = embedded_tokens + embedded_positions
         return outputs
 
