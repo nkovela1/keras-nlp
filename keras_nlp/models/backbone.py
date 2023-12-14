@@ -27,11 +27,11 @@ class Backbone(keras.Model):
         super().__init__(*args, **kwargs)
         self._token_embedding = None
 
-    # def __setattr__(self, name, value):
-    #     # Work around torch setattr for properties.
-    #     if name in ["token_embedding"]:
-    #         return object.__setattr__(self, name, value)
-    #     return super().__setattr__(name, value)
+    def __setattr__(self, name, value):
+        # Work around torch setattr for properties.
+        if name in ["token_embedding"]:
+            return object.__setattr__(self, name, value)
+        return super().__setattr__(name, value)
 
     @property
     def token_embedding(self):
@@ -43,16 +43,12 @@ class Backbone(keras.Model):
 
     @token_embedding.setter
     def token_embedding(self, value):
+        # Workaround tf.keras h5 checkpoint loading, which is sensitive to layer
+        # count mismatches and does not deduplicate layers. This could go away
+        # if we update our checkpoints to the newer `.weights.h5` format.
+        # self._setattr_tracking = False
         self._token_embedding = value
-
-    # @token_embedding.setter
-    # def token_embedding(self, value):
-    #     # Workaround tf.keras h5 checkpoint loading, which is sensitive to layer
-    #     # count mismatches and does not deduplicate layers. This could go away
-    #     # if we update our checkpoints to the newer `.weights.h5` format.
-    #     self._setattr_tracking = False
-    #     self._token_embedding = value
-    #     self._setattr_tracking = True
+        # self._setattr_tracking = True
 
     def get_config(self):
         # Don't chain to super here. The default `get_config()` for functional
