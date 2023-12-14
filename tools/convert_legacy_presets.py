@@ -39,18 +39,18 @@ def to_snake_case(name):
 
 if __name__ == "__main__":
     backbone_models = [
-        (models.AlbertBackbone, models.AlbertTokenizer),
-        (models.BartBackbone, models.BartTokenizer),
+        # (models.AlbertBackbone, models.AlbertTokenizer),
+        # (models.BartBackbone, models.BartTokenizer),
         (models.BertBackbone, models.BertTokenizer),
-        (models.DebertaV3Backbone, models.DebertaV3Tokenizer),
-        (models.DistilBertBackbone, models.DistilBertTokenizer),
-        (models.FNetBackbone, models.FNetTokenizer),
-        (models.GPT2Backbone, models.GPT2Tokenizer),
-        (models.OPTBackbone, models.OPTTokenizer),
-        (models.RobertaBackbone, models.RobertaTokenizer),
-        (models.T5Backbone, models.T5Tokenizer),
-        (models.WhisperBackbone, models.WhisperTokenizer),
-        (models.XLMRobertaBackbone, models.XLMRobertaTokenizer),
+        # (models.DebertaV3Backbone, models.DebertaV3Tokenizer),
+        # (models.DistilBertBackbone, models.DistilBertTokenizer),
+        # (models.FNetBackbone, models.FNetTokenizer),
+        # (models.GPT2Backbone, models.GPT2Tokenizer),
+        # (models.OPTBackbone, models.OPTTokenizer),
+        # (models.RobertaBackbone, models.RobertaTokenizer),
+        # (models.T5Backbone, models.T5Tokenizer),
+        # (models.WhisperBackbone, models.WhisperTokenizer),
+        # (models.XLMRobertaBackbone, models.XLMRobertaTokenizer),
     ]
     for backbone_cls, tokenizer_cls in backbone_models:
         for preset in backbone_cls.presets:
@@ -81,7 +81,7 @@ if __name__ == "__main__":
                         "--add-acl-grant=entity=AllUsers,role=READER"
                     )
             # Clean up local disk usage.
-            shutil.rmtree("models")
+            # shutil.rmtree("models")
             shutil.rmtree(preset)
 
     # Handle our single task model.
@@ -113,5 +113,5 @@ if __name__ == "__main__":
                 "--add-acl-grant=entity=AllUsers,role=READER"
             )
     # Clean up local disk usage.
-    shutil.rmtree("models")
+    # shutil.rmtree("models")
     shutil.rmtree(preset)

@@ -19,6 +19,7 @@ from typing import List
 import tensorflow as tf
 
 from keras_nlp.api_export import keras_nlp_export
+from keras_nlp.backend import keras
 from keras_nlp.tokenizers import tokenizer
 from keras_nlp.utils.preset_utils import check_preset_class
 from keras_nlp.utils.preset_utils import load_from_preset
@@ -34,7 +35,7 @@ try:
 except ImportError:
     tf_text = None
 
-VOCAB_FILENAME = "vocabulary.txt"
+FILENAME = "vocabulary.txt"
 
 # Matches whitespace and control characters.
 WHITESPACE_REGEX = r"|".join(
@@ -325,27 +326,22 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         self.split_on_cjk = split_on_cjk
         self.suffix_indicator = suffix_indicator
         self.oov_token = oov_token
-        self.set_vocabulary(vocabulary)
+        self._fast_word_piece = None
+
+        if vocabulary is not None:
+            self.load_vocabulary(vocabulary)
 
     def save_assets(self, dir_path):
-        path = os.path.join(dir_path, VOCAB_FILENAME)
-        with open(path, "w", encoding="utf-8") as file:
+        with tf.io.gfile.GFile(os.path.join(dir_path, FILENAME), "w") as file:
             for token in self.vocabulary:
                 file.write(f"{token}\n")
 
     def load_assets(self, dir_path):
-        path = os.path.join(dir_path, VOCAB_FILENAME)
-        self.set_vocabulary(path)
+        self.load_vocabulary(os.path.join(dir_path, FILENAME))
 
-    def set_vocabulary(self, vocabulary):
-        """Set the tokenizer vocabulary to a file or list of strings."""
-        if vocabulary is None:
-            self.vocabulary = None
-            self._fast_word_piece = None
-            return
-
+    def load_vocabulary(self, vocabulary):
         if isinstance(vocabulary, str):
-            with open(vocabulary, "r", encoding="utf-8") as file:
+            with tf.io.gfile.GFile(vocabulary) as file:
                 self.vocabulary = [line.rstrip() for line in file]
         elif isinstance(vocabulary, Iterable):
             # Make a defensive copy.
@@ -376,17 +372,14 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
 
     def get_vocabulary(self) -> List[str]:
         """Get the tokenizer vocabulary as a list of strings tokens."""
-        self._check_vocabulary()
         return self.vocabulary
 
     def vocabulary_size(self) -> int:
         """Get the size of the tokenizer vocabulary."""
-        self._check_vocabulary()
         return len(self.vocabulary)
 
     def id_to_token(self, id: int) -> str:
         """Convert an integer id to a string token."""
-        self._check_vocabulary()
         if id >= self.vocabulary_size() or id < 0:
             raise ValueError(
                 f"`id` must be in range [0, {self.vocabulary_size() - 1}]. "
@@ -399,7 +392,6 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         # This will be slow, but keep memory usage down compared to building a
         # . Assuming the main use case is looking up a few special tokens
         # early in the vocab, this should be fine.
-        self._check_vocabulary()
         return self.vocabulary.index(token)
 
     def get_config(self):
@@ -417,15 +409,7 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         )
         return config
 
-    def _check_vocabulary(self):
-        if self.vocabulary is None:
-            raise ValueError(
-                "No vocabulary has been set for WordPieceTokenizer. Make sure "
-                "to pass a `vocabulary` argument when creating the layer."
-            )
-
     def tokenize(self, inputs):
-        self._check_vocabulary()
         if not isinstance(inputs, (tf.Tensor, tf.RaggedTensor)):
             inputs = tf.convert_to_tensor(inputs)
 
@@ -439,6 +423,11 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         )
 
         # Apply WordPiece and coerce shape for outputs.
+        if self._fast_word_piece is None:
+            raise ValueError(
+                "No vocabulary has been set for WordPieceTokenizer. Make sure "
+                "to pass a `vocabulary` argument when creating the layer."
+            )
         tokens = self._fast_word_piece.tokenize(inputs)
         # By default tf.text tokenizes text with two ragged dimensions (one for
         # split words and one for split subwords). We will collapse to a single
@@ -458,7 +447,6 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         return tokens
 
     def detokenize(self, inputs):
-        self._check_vocabulary()
         inputs, unbatched, _ = convert_to_ragged_batch(inputs)
         outputs = self._fast_word_piece.detokenize(inputs)
         if unbatched:
@@ -468,6 +456,30 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
     @classproperty
     def presets(cls):
         return {}
+
+    @classmethod
+    def _legacy_from_preset(
+        cls,
+        preset,
+        **kwargs,
+    ):
+        metadata = cls.presets[preset]
+
+        vocabulary = keras.utils.get_file(
+            "vocab.txt",
+            metadata["vocabulary_url"],
+            cache_subdir=os.path.join("models", preset),
+            file_hash=metadata["vocabulary_hash"],
+        )
+
+        config = metadata["preprocessor_config"]
+        config.update(
+            {
+                "vocabulary": vocabulary,
+            },
+        )
+
+        return cls.from_config({**config, **kwargs})
 
     @classmethod
     def from_preset(
@@ -492,10 +504,9 @@ class WordPieceTokenizer(tokenizer.Tokenizer):
         tokenizer.detokenize([5, 6, 7, 8, 9])
         ```
         """
-        # We support short IDs for official presets, e.g. `"bert_base_en"`.
-        # Map these to a Kaggle Models handle.
+        # TODO: delete me!
         if preset in cls.presets:
-            preset = cls.presets[preset]["kaggle_handle"]
+            return cls._legacy_from_preset(preset, **kwargs)
 
         config_file = "tokenizer.json"
         check_preset_class(preset, cls, config_file=config_file)
