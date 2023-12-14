@@ -46,9 +46,9 @@ class Backbone(keras.Model):
         # Workaround tf.keras h5 checkpoint loading, which is sensitive to layer
         # count mismatches and does not deduplicate layers. This could go away
         # if we update our checkpoints to the newer `.weights.h5` format.
-        # self._setattr_tracking = False
+        self._setattr_tracking = False
         self.__token_embedding = value
-        # self._setattr_tracking = True
+        self._setattr_tracking = True
 
     def get_config(self):
         # Don't chain to super here. The default `get_config()` for functional
