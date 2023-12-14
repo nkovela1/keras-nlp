@@ -25,7 +25,7 @@ from keras_nlp.utils.python_utils import format_docstring
 class Backbone(keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._token_embedding = None
+        self.__token_embedding = None
 
     def __setattr__(self, name, value):
         # Work around torch setattr for properties.
@@ -39,7 +39,7 @@ class Backbone(keras.Model):
 
         This layer integer token ids to the hidden dim of the model.
         """
-        return self._token_embedding
+        return self.__token_embedding
 
     @token_embedding.setter
     def token_embedding(self, value):
@@ -47,7 +47,7 @@ class Backbone(keras.Model):
         # count mismatches and does not deduplicate layers. This could go away
         # if we update our checkpoints to the newer `.weights.h5` format.
         # self._setattr_tracking = False
-        self._token_embedding = value
+        self.__token_embedding = value
         # self._setattr_tracking = True
 
     def get_config(self):
